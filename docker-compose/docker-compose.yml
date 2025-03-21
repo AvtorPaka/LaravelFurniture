@@ -1,0 +1,72 @@
+services:
+  nginx:
+    image: nginx:1.27.3
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ${WORK_DIR}:/var/www
+    ports:
+      - ${APP_C_PORT}:80
+    networks:
+      - lv-f-network
+    depends_on:
+      - php-fpm
+
+  php-fpm:
+    build:
+      dockerfile: Dockerfile
+      context: .
+      target: php-fpm
+    restart: always
+    command:
+      - php-fpm
+    depends_on:
+      - mysql
+    env_file:
+      - ./.env
+    networks:
+      - lv-f-network
+    volumes:
+      - ${WORK_DIR}:/var/www
+
+  workspace:
+    build:
+      dockerfile: Dockerfile
+      context: .
+      target: workspace
+    restart: always
+    env_file:
+      - ./.env
+    depends_on:
+      - mysql
+    networks:
+      - lv-f-network
+    volumes:
+      - ${WORK_DIR}:/var/www
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - lv-f-network
+    ports:
+      - ${DB_PORT}:3306
+
+volumes:
+  mysql-data:
+    driver: local
+
+networks:
+  lv-f-network:
+    driver: bridge
